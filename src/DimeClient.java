@@ -16,7 +16,8 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.*;
+import java.util.List;
 
 /**
  * Created by Gennadiy on 27.07.2014.
@@ -107,8 +108,9 @@ public class DimeClient extends JFrame{
 
 
         JPanel leftTopPanel = new JPanel();
+        leftTopPanel.setLayout(new BorderLayout());
         leftTopPanel.add(onlineLabel, BorderLayout.NORTH);
-        leftTopPanel.add(listOfAllParticipants, BorderLayout.CENTER);
+        leftTopPanel.add(new JScrollPane(listOfAllParticipants), BorderLayout.CENTER);
         leftTopPanel.add(addToSendListButton, BorderLayout.SOUTH);
 
 
@@ -130,8 +132,9 @@ public class DimeClient extends JFrame{
         deleteFromSendListButton.setEnabled(false);
 
         JPanel leftBottomPanel = new JPanel();
+        leftBottomPanel.setLayout(new BorderLayout());
         leftBottomPanel.add(sendToListLabel, BorderLayout.NORTH);
-        leftBottomPanel.add(listOfAddedParticipants, BorderLayout.CENTER);
+        leftBottomPanel.add(new JScrollPane(listOfAddedParticipants), BorderLayout.CENTER);
         leftBottomPanel.add(deleteFromSendListButton, BorderLayout.SOUTH);
 
 
@@ -246,6 +249,7 @@ public class DimeClient extends JFrame{
         }
     }
 
+
     private void showMessage(final String message, final int typeOfMessage) {
 
         dateobj = new Date();
@@ -269,6 +273,7 @@ public class DimeClient extends JFrame{
 
     }
 
+    //Set color of text depending on message type
     private Style getAttributes(int typeOfMessage) {
         Style messageFontStyle = conversationPane.addStyle("Font color", null);
         switch (typeOfMessage) {
@@ -286,6 +291,7 @@ public class DimeClient extends JFrame{
         return messageFontStyle;
     }
 
+    //Update contact list after every change server connections quantity
     private void updateUIListOfClients(String[] array) {
         log.info("updateUIListOfClients");
         if (array.length > 0) {
@@ -299,9 +305,11 @@ public class DimeClient extends JFrame{
                 allParticipantsModel.addElement(user);
 
         }
+        updateAddedList(array);
 
     }
 
+    //Add user on Add Button Click
     private void addUserToSendList(String user) {
         sendMessage(String.format(ADD_USER_FORMAT, user));
         addedParticipantsModel.addElement(user);
@@ -309,6 +317,7 @@ public class DimeClient extends JFrame{
 
     }
 
+    //Delete user on Delete Button Click
     private void deleteUserFromSendList(String user) {
         addedParticipantsModel.removeElement(user);
         if (addedParticipantsModel.size() == 0) {
@@ -318,6 +327,18 @@ public class DimeClient extends JFrame{
 
         sendMessage(String.format(DELETE_USER_FORMAT, user));
 
+    }
+
+    //Remove user from SendToList in case of client termination
+    private void updateAddedList(String[] onlineArray) {
+        String[] added = new String[addedParticipantsModel.size()];
+        addedParticipantsModel.copyInto(added);
+        List<String> onlineList = Arrays.asList(onlineArray);
+        for (String user : added) {
+            if (!onlineList.contains(user)) {
+                addedParticipantsModel.removeElement(user);
+            }
+        }
     }
 
 
