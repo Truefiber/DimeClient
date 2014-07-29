@@ -23,10 +23,23 @@ import java.util.Date;
  */
 public class DimeClient extends JFrame{
 
+
     private JTextField inputField;
-    //private JTextArea conversationArea;
-    JTextPane conversationPane;
-    StyledDocument conversationDoc;
+    private JTextPane conversationPane;
+    private StyledDocument conversationDoc;
+
+    private JLabel onlineLabel = new JLabel("Online");
+    private JList listOfAllParticipants;
+    private DefaultListModel<String> allParticipantsModel;
+    private JButton addToSendListButton;
+
+
+    private JLabel sendToListLabel = new JLabel("You are sending to:");
+    private JList listOfAddedParticipants;
+    private DefaultListModel<String> addedParticipantsModel;
+    private JButton deleteFromSendListButton;
+
+
 
 
     private ObjectOutputStream messageOutput;
@@ -41,6 +54,13 @@ public class DimeClient extends JFrame{
     private static final int OWN_MESSAGE = 0;
     private static final int FOREIGN_MESSAGE = 1;
     private static final int SERVICE_MESSAGE = 2;
+
+    private static final String ADD_BUTTON_TEXT = "Add to send list";
+    private static final String ADD_USER_FORMAT = "server add %s";
+    private static final String DELETE_FROM_SEND_LIST = "Delete user";
+    private static final String DELETE_USER_FORMAT = "server delete %s";
+
+
 
 
     public DimeClient(String serverIP) {
@@ -64,18 +84,74 @@ public class DimeClient extends JFrame{
             }
         });
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, scrollPane, inputField);
-        splitPane.setOneTouchExpandable(true);
+        JSplitPane rightSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, scrollPane, inputField);
+        rightSplitPane.setOneTouchExpandable(true);
         Dimension min = new Dimension(400,35);
         inputField.setMinimumSize(min);
 
-        //add(inputField, BorderLayout.SOUTH);
-        //conversationArea = new JTextArea();
-        //add(new JScrollPane(conversationArea));
-        getContentPane().add(splitPane, BorderLayout.CENTER);
-        setSize(400, 400);
+        allParticipantsModel = new DefaultListModel<String>();
+        listOfAllParticipants = new JList(allParticipantsModel);
+
+        addToSendListButton = new JButton(ADD_BUTTON_TEXT);
+        addToSendListButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int index = listOfAllParticipants.getSelectedIndex();
+                if (index > -1) {
+                    String user = allParticipantsModel.get(index);
+                    addUserToSendList(user);
+                }
+            }
+        });
+        addToSendListButton.setEnabled(false);
+
+
+        JPanel leftTopPanel = new JPanel();
+        leftTopPanel.add(onlineLabel, BorderLayout.NORTH);
+        leftTopPanel.add(listOfAllParticipants, BorderLayout.CENTER);
+        leftTopPanel.add(addToSendListButton, BorderLayout.SOUTH);
+
+
+
+
+        addedParticipantsModel = new DefaultListModel<String>();
+        listOfAddedParticipants = new JList(addedParticipantsModel);
+        deleteFromSendListButton = new JButton(DELETE_FROM_SEND_LIST);
+        deleteFromSendListButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int index = listOfAddedParticipants.getSelectedIndex();
+                if (index > -1) {
+                    String user = addedParticipantsModel.get(index);
+                    deleteUserFromSendList(user);
+                }
+            }
+        });
+        deleteFromSendListButton.setEnabled(false);
+
+        JPanel leftBottomPanel = new JPanel();
+        leftBottomPanel.add(sendToListLabel, BorderLayout.NORTH);
+        leftBottomPanel.add(listOfAddedParticipants, BorderLayout.CENTER);
+        leftBottomPanel.add(deleteFromSendListButton, BorderLayout.SOUTH);
+
+
+        JSplitPane leftSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, leftTopPanel,
+                leftBottomPanel);
+
+
+
+        JSplitPane outSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftSplitPane,
+                rightSplitPane);
+
+
+
+
+        getContentPane().add(outSplitPane, BorderLayout.CENTER);
+        setSize(600, 400);
         setVisible(true);
-        splitPane.setDividerLocation(0.9);
+        rightSplitPane.setDividerLocation(0.9);
+        leftSplitPane.setDividerLocation(0.5);
+        outSplitPane.setDividerLocation(0.25);
 
 
     }
@@ -117,17 +193,24 @@ public class DimeClient extends JFrame{
     private void chat() throws IOException{
         String message = "You can chat";
         showMessage(message, SERVICE_MESSAGE);
+
         inputField.setEditable(true);
 
 
         while (!message.equals("Exit")){
             try {
-                message = (String) messageInput.readObject();
-                if (message.length() > 8 && message.substring(0, 7).equals("Server:")) {
-                    showMessage(message, SERVICE_MESSAGE);
+                Object mes = messageInput.readObject();
 
+                if (mes instanceof String[]) {
+                    updateUIListOfClients((String[])mes);
                 } else {
-                    showMessage(message, FOREIGN_MESSAGE);
+                    message = (String) mes;
+                    if (message.length() > 8 && message.substring(0, 7).equals("Server:")) {
+                        showMessage(message, SERVICE_MESSAGE);
+
+                    } else {
+                        showMessage(message, FOREIGN_MESSAGE);
+                    }
                 }
 
             } catch (ClassNotFoundException e) {
@@ -155,7 +238,9 @@ public class DimeClient extends JFrame{
 
             messageOutput.writeObject(message);
             messageOutput.flush();
-            showMessage(message, OWN_MESSAGE);
+            if (!message.contains("server")) {
+                showMessage(message, OWN_MESSAGE);
+            }
         } catch (IOException e) {
             showMessage("Error while sending message", SERVICE_MESSAGE);
         }
@@ -200,5 +285,41 @@ public class DimeClient extends JFrame{
 
         return messageFontStyle;
     }
+
+    private void updateUIListOfClients(String[] array) {
+        log.info("updateUIListOfClients");
+        if (array.length > 0) {
+            addToSendListButton.setEnabled(true);
+        } else {
+            addToSendListButton.setEnabled(false);
+        }
+        allParticipantsModel.clear();
+        for (String user : array) {
+
+                allParticipantsModel.addElement(user);
+
+        }
+
+    }
+
+    private void addUserToSendList(String user) {
+        sendMessage(String.format(ADD_USER_FORMAT, user));
+        addedParticipantsModel.addElement(user);
+        deleteFromSendListButton.setEnabled(true);
+
+    }
+
+    private void deleteUserFromSendList(String user) {
+        addedParticipantsModel.removeElement(user);
+        if (addedParticipantsModel.size() == 0) {
+            deleteFromSendListButton.setEnabled(false);
+        }
+        log.info("Deleting user " + user);
+
+        sendMessage(String.format(DELETE_USER_FORMAT, user));
+
+    }
+
+
 
 }
