@@ -7,7 +7,7 @@ public class UseClient {
 
     public static void main(String[] args) {
 
-        DimeClient dimeClient = new DimeClient("127.0.0.1");
+        DimeClient dimeClient = new DimeClient();
         dimeClient.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         dimeClient.startClient();
 

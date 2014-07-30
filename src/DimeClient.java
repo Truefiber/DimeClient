@@ -64,9 +64,9 @@ public class DimeClient extends JFrame{
 
 
 
-    public DimeClient(String serverIP) {
+    public DimeClient() {
         super("Dio Messenger");
-        dimeServerIP = serverIP;
+
 
         conversationPane = new JTextPane();
         conversationPane.setEditable(false);
@@ -170,7 +170,7 @@ public class DimeClient extends JFrame{
             showMessage("Session is over", SERVICE_MESSAGE);
 
         } catch (IOException e) {
-            e.printStackTrace();
+            showMessage("server failure", SERVICE_MESSAGE);
         }
 
         finally {
@@ -180,8 +180,15 @@ public class DimeClient extends JFrame{
     }
 
     private void establishConnection() throws IOException{
+        dimeServerIP = (String) JOptionPane.showInputDialog(null, "Enter host address:",
+                "Connection Settings",
+                JOptionPane.PLAIN_MESSAGE, null, null, "127.0.0.1");
+        String portNumber = (String) JOptionPane.showInputDialog(null, "Enter port:",
+                "Connection Settings",
+                JOptionPane.PLAIN_MESSAGE, null, null, "8080");
+
         showMessage("Wait a few seconds", SERVICE_MESSAGE);
-        connection = new Socket(InetAddress.getByName(dimeServerIP), 8080);
+        connection = new Socket(InetAddress.getByName(dimeServerIP), Integer.valueOf(portNumber));
         showMessage("Connected to " + connection.getInetAddress().getHostName(), SERVICE_MESSAGE);
 
     }
